@@ -18,23 +18,20 @@ func GenerateSecretConfig(kmsKeyName string, namespace string, secretName string
 
 	if namespace == "" {
 		err = fmt.Errorf("namespace cannot be empty")
-		encryptedConfig.Namespace = namespace
+		return
 	}
+	encryptedConfig.Namespace = namespace
 
 	if secretName == "" {
 		err = fmt.Errorf("secretName cannot be empty")
-		encryptedConfig.SecretName = secretName
-	}
-
-	if err != nil {
 		return
 	}
+	encryptedConfig.SecretName = secretName
 
 	for _, plaintextKeyVal := range keyVals {
 		encryptedKeyVal, err := plaintextKeyVal.encryptPlaintextKeyValue(kmsKeyName)
 		if err != nil {
-			err = fmt.Errorf("could not encrypt key/val: %v", err)
-			return
+			return encryptedConfig, fmt.Errorf("could not encrypt key/val: %v", err)
 		}
 		encryptedConfig.Secrets = append(encryptedConfig.Secrets, *encryptedKeyVal)
 	}
@@ -51,6 +48,7 @@ func (plaintext *PlaintextSecretKeyValue) encryptPlaintextKeyValue(kmsKeyName st
 		err = fmt.Errorf("encrypting val: %v", err)
 	}
 	encrypted.B64EncryptedValue = b64Encode(encryptedVal)
+	return
 }
 
 func gcloudEncryptPlaintext(kmsKeyName string, plaintext string) (encrypted []byte, err error) {
