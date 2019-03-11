@@ -1,6 +1,10 @@
 VERSION=$(shell cat VERSION)
-RELEASE_TYPE:=patch
-build:
+RELEASE_TYPE=patch
+
+install:
+	go install ./main.go
+
+build_binary:
 	go build -o build/secret-deployer ./main.go
 
 docker:

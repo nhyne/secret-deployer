@@ -11,10 +11,10 @@ import (
 
 type PlaintextSecretKeyValue struct {
 	Key string
-	value string
+	Value string
 }
 
-func GenerateSecretConfig(kmsKeyName string, namespace string, secretName string, keyVals []PlaintextSecretKeyValue) (encryptedConfig EncryptedSecretConfig, err error) {
+func GenerateSecretConfig(kmsKeyName string, namespace string, secretName string, keyVals []*PlaintextSecretKeyValue) (encryptedConfig EncryptedSecretConfig, err error) {
 
 	if namespace == "" {
 		err = fmt.Errorf("namespace cannot be empty")
@@ -33,7 +33,7 @@ func GenerateSecretConfig(kmsKeyName string, namespace string, secretName string
 		if err != nil {
 			return encryptedConfig, fmt.Errorf("could not encrypt key/val: %v", err)
 		}
-		encryptedConfig.Secrets = append(encryptedConfig.Secrets, *encryptedKeyVal)
+		encryptedConfig.Secrets = append(encryptedConfig.Secrets, encryptedKeyVal)
 	}
 
 	spew.Dump(encryptedConfig)
@@ -41,11 +41,11 @@ func GenerateSecretConfig(kmsKeyName string, namespace string, secretName string
 	return
 }
 
-func (plaintext *PlaintextSecretKeyValue) encryptPlaintextKeyValue(kmsKeyName string) (encrypted *EncryptedSecretKeyValue, err error) {
+func (plaintext *PlaintextSecretKeyValue) encryptPlaintextKeyValue(kmsKeyName string) (encrypted EncryptedSecretKeyValue, err error) {
 	encrypted.Key = plaintext.Key
-	encryptedVal, err := gcloudEncryptPlaintext(kmsKeyName, plaintext.value)
+	encryptedVal, err := gcloudEncryptPlaintext(kmsKeyName, plaintext.Value)
 	if err != nil {
-		err = fmt.Errorf("encrypting val: %v", err)
+		err = fmt.Errorf("could not encrypt val: %v", err)
 	}
 	encrypted.B64EncryptedValue = b64Encode(encryptedVal)
 	return

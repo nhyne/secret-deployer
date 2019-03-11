@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/nhyne/secret-deployer/pkg/secretConfig"
+	"github.com/spf13/viper"
 
 	"github.com/spf13/cobra"
 )
@@ -12,16 +15,29 @@ var encryptCmd = &cobra.Command{
 	Short: "Encrypt a string",
 	Long: `Encrypt a string to be put into a secret config file.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		keyVals, err := cmd.Flags().GetStringSlice("key-vals")
+		projectId := viper.Get("projectId")
+		location := viper.Get("location")
+		keyringId := viper.Get("keyringId")
+		keyId := viper.Get("keyId")
+
+		kmsKeyId := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", projectId, location, keyringId, keyId)
+
+		inputSilce, err := cmd.Flags().GetStringSlice("key-vals")
 		if err != nil {
 			fmt.Println("ERROR: invalid key-vals list")
 		}
 
-		if len(keyVals) % 2 == 1 {
+		if len(inputSilce) % 2 == 1 {
 			fmt.Println("ERROR: odd number of key-vals")
 		}
 
+		plaintextKeyVals := generatePlainTextSlice(inputSilce)
 
+		spew.Dump(plaintextKeyVals)
+		_, err = secretConfig.GenerateSecretConfig(kmsKeyId, "jenkins", "jenkins", plaintextKeyVals)
+		if err != nil {
+			fmt.Printf("error generating secret config: %v", err)
+		}
 	},
 }
 
@@ -33,4 +49,22 @@ func init() {
 	encryptCmd.MarkFlagRequired("secret")
 	encryptCmd.Flags().StringSlice("key-vals", nil, "Key Values. Should follow pattern: 'key1,value1,key2,value2....")
 	encryptCmd.MarkFlagRequired("key-vals")
+}
+
+func generatePlainTextSlice(inputSlice []string) ([]*secretConfig.PlaintextSecretKeyValue) {
+	plaintextKeyValSlice := make([]*secretConfig.PlaintextSecretKeyValue, 0)
+	keys := make([]string, 0)
+	vals := make([]string, 0)
+	for i, val := range inputSlice {
+		if i % 2 == 0 {
+			keys = append(keys, val)
+		} else {
+			vals = append(vals, val)
+		}
+	}
+
+	for i, _ := range keys {
+		plaintextKeyValSlice = append(plaintextKeyValSlice, &secretConfig.PlaintextSecretKeyValue{Key: keys[i], Value: vals[i]})
+	}
+	return plaintextKeyValSlice
 }
