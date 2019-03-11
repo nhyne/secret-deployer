@@ -1,11 +1,10 @@
 package secretConfig
 
 import (
-	"context"
 	cloudkms "cloud.google.com/go/kms/apiv1"
+	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
@@ -36,8 +35,6 @@ func GenerateSecretConfig(kmsKeyName string, namespace string, secretName string
 		encryptedConfig.Secrets = append(encryptedConfig.Secrets, encryptedKeyVal)
 	}
 
-	spew.Dump(encryptedConfig)
-
 	return
 }
 
@@ -45,7 +42,7 @@ func (plaintext *PlaintextSecretKeyValue) encryptPlaintextKeyValue(kmsKeyName st
 	encrypted.Key = plaintext.Key
 	encryptedVal, err := gcloudEncryptPlaintext(kmsKeyName, plaintext.Value)
 	if err != nil {
-		err = fmt.Errorf("could not encrypt val: %v", err)
+		err = fmt.Errorf("encryption request failed: %v", err)
 	}
 	encrypted.B64EncryptedValue = b64Encode(encryptedVal)
 	return

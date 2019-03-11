@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/nhyne/secret-deployer/pkg/secretConfig"
 	"github.com/spf13/viper"
 
@@ -33,7 +32,6 @@ var encryptCmd = &cobra.Command{
 
 		plaintextKeyVals := generatePlainTextSlice(inputSilce)
 
-		spew.Dump(plaintextKeyVals)
 		_, err = secretConfig.GenerateSecretConfig(kmsKeyId, "jenkins", "jenkins", plaintextKeyVals)
 		if err != nil {
 			fmt.Printf("error generating secret config: %v", err)
