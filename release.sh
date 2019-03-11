@@ -34,26 +34,26 @@ if [ -z $1 ]; then
 fi
 
 if [ $1 == "major" ]; then
-    git_release
     major=$(get_major)
     new_major=$(( major + 1 ))
     echo "$new_major.0.0" > VERSION
     git_push_version_bump
-elif [ $1 == "minor" ]; then
     git_release
+elif [ $1 == "minor" ]; then
     major=$(get_major)
     minor=$(get_minor)
     new_minor=$(( minor + 1 ))
     echo "$major.$new_minor.0" > VERSION
     git_push_version_bump
-elif [ $1 == "patch" ]; then
     git_release
+elif [ $1 == "patch" ]; then
     major=$(get_major)
     minor=$(get_minor)
     patch=$(get_patch)
     new_patch=$(( patch + 1 ))
     echo "$major.$minor.$new_patch" > VERSION
     git_push_version_bump
+    git_release
 else
     echo "Invalid version bump type"
 fi
