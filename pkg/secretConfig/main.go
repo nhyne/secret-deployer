@@ -1,7 +1,5 @@
 package secretConfig
 
-import "encoding/base64"
-
 type EncryptedSecretConfig struct {
 	Namespace string `yaml:namespace`
 	SecretName string `yaml:secretName`
@@ -13,6 +11,14 @@ type EncryptedSecretKeyValue struct {
 	B64EncryptedValue string `yaml:b64EncryptedValue`
 }
 
-func (keyVal *EncryptedSecretKeyValue) B64Decode() (b64Decoded []byte, error error) {
-	return base64.StdEncoding.DecodeString(keyVal.B64EncryptedValue)
+type PlaintetSecretConfig struct {
+	Namespace string `yaml:namespace`
+	SecretName string `yaml:secretName`
+	PlaintextSecrets []PlaintextSecretKeyValue `yaml:plaintextSecrets`
 }
+
+type PlaintextSecretKeyValue struct {
+	Key string
+	Value string
+}
+

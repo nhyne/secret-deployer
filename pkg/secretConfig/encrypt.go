@@ -8,11 +8,6 @@ import (
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
-type PlaintextSecretKeyValue struct {
-	Key string
-	Value string
-}
-
 func GenerateSecretConfig(kmsKeyName string, namespace string, secretName string, keyVals []*PlaintextSecretKeyValue) (encryptedConfig EncryptedSecretConfig, err error) {
 
 	if namespace == "" {
