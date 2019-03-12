@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/nhyne/secret-deployer/pkg/secretConfig"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
+	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // applyCmd represents the apply command
@@ -16,9 +18,16 @@ var applyCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		projectId := viper.Get("projectId")
 		location := viper.Get("location")
+		keyringId := viper.Get("keyringId")
+		keyId := viper.Get("keyId")
 
-		fmt.Println("projectId: %s, location: %s", projectId, location)
+		configPath, err := cmd.Flags().GetString("file")
+		if err != nil {
+			fmt.Printf("error: %v", err)
+		}
 
+		kmsKeyId := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", projectId, location, keyringId, keyId)
+		applySecret(configPath, kmsKeyId)
 	},
 }
 
@@ -27,26 +36,46 @@ func init() {
 
 	applyCmd.Flags().Bool("dryrun", true, "When true will show secrets to change.")
 	applyCmd.Flags().StringP("file", "f", "", "Secret config to apply.")
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// applyCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// applyCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	applyCmd.MarkFlagRequired("file")
 }
 
-func readSecretConfig(secretConfigPath string) (secretConfig *secretConfig.EncryptedSecretConfig, err error) {
-	yamlFile, err := ioutil.ReadFile(secretConfigPath)
+func applySecret(path string, kmsKey string) (error) {
+
+	secretObject, namespace, err := secretConfig.ConvertSecretConfigToSecretObject(path, kmsKey)
 	if err != nil {
-		return
-	}
-	err = yaml.Unmarshal(yamlFile, secretConfig)
-	if err != nil {
-		return
+		return err
 	}
 
-	return
+	config, err := generateConfigFromFile("/Users/adamjohnson/.kube/config")
+	if err != nil {
+		fmt.Printf("%v", err)
+	}
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		panic(err)
+	}
+
+	secretOut, err := clientset.CoreV1().Secrets(namespace).Create(secretObject)
+	if err != nil {
+		fmt.Printf("could not create secret: %v", err)
+	}
+
+	return nil
+}
+
+//func applySecretObject(secretObject *corev1.Secret) (error) {
+//
+//}
+//
+//// returns true if the secret exists
+//func doesSecretExist(secretName string, namespace string) (bool, error) {
+//
+//}
+
+func generateConfigFromFile(kubeconfigPath string) (*restclient.Config, error) {
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	if err != nil {
+		return nil, fmt.Errorf("coulf not generate config: %v", err)
+	}
+	return config, nil
 }

@@ -36,9 +36,19 @@ var encryptCmd = &cobra.Command{
 			fmt.Printf("error reading output file flag: %v", err)
 		}
 
+		namespace, err := cmd.Flags().GetString("namespace")
+		if err != nil {
+			fmt.Printf("error reading namespace flag: %v", err)
+		}
+
+		secretName, err := cmd.Flags().GetString("secret")
+		if err != nil {
+			fmt.Printf("error reading secret flag: %v", err)
+		}
+
 		plaintextKeyVals := generatePlainTextSlice(inputSilce)
 
-		encryptedSecretConfig, err := secretConfig.GenerateSecretConfig(kmsKeyId, "jenkins", "jenkins", plaintextKeyVals)
+		encryptedSecretConfig, err := secretConfig.GenerateSecretConfig(kmsKeyId, namespace, secretName, plaintextKeyVals)
 		if err != nil {
 			fmt.Printf("error generating secret config: %v", err)
 		}

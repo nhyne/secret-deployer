@@ -34,7 +34,6 @@ func DecryptSecretConfig(path string, kmsKey string) (*PlaintetSecretConfig, err
 	return &plaintextSecretConfig, nil
 }
 
-
 func readEncryptedSecretConfigFile(path string) (*EncryptedSecretConfig, error) {
 	encryptedSecretConfigBytes, err := ioutil.ReadFile(path)
 	if err != nil {
