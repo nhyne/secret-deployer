@@ -12,5 +12,5 @@ docker:
 	docker build -t nhyne/secret-deployer:${VERSION} .
 	docker push nhyne/secret-deployer:${VERSION}
 
-release:
+release: install
 	./release.sh ${RELEASE_TYPE}

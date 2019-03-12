@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/nhyne/secret-deployer/pkg/secretConfig"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 
 	"github.com/spf13/cobra"
 )
@@ -20,21 +22,35 @@ var encryptCmd = &cobra.Command{
 		keyId := viper.Get("keyId")
 
 		kmsKeyId := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", projectId, location, keyringId, keyId)
-
 		inputSilce, err := cmd.Flags().GetStringSlice("key-vals")
 		if err != nil {
-			fmt.Println("ERROR: invalid key-vals list")
+			fmt.Println("error: invalid key-vals list")
 		}
 
 		if len(inputSilce) % 2 == 1 {
-			fmt.Println("ERROR: odd number of key-vals")
+			fmt.Println("error: odd number of key-vals")
+		}
+
+		outFile, err := cmd.Flags().GetString("out-file")
+		if err != nil {
+			fmt.Printf("error reading output file flag: %v", err)
 		}
 
 		plaintextKeyVals := generatePlainTextSlice(inputSilce)
 
-		_, err = secretConfig.GenerateSecretConfig(kmsKeyId, "jenkins", "jenkins", plaintextKeyVals)
+		encryptedSecretConfig, err := secretConfig.GenerateSecretConfig(kmsKeyId, "jenkins", "jenkins", plaintextKeyVals)
 		if err != nil {
 			fmt.Printf("error generating secret config: %v", err)
+		}
+
+		fileBytes, err := yaml.Marshal(encryptedSecretConfig)
+		if err != nil {
+			fmt.Printf("error marshalling secret config: %v", err)
+		}
+
+		err = ioutil.WriteFile(outFile, fileBytes, 0644)
+		if err != nil {
+			fmt.Printf("error writing secret config to file: %v", err)
 		}
 	},
 }
@@ -47,6 +63,8 @@ func init() {
 	encryptCmd.MarkFlagRequired("secret")
 	encryptCmd.Flags().StringSlice("key-vals", nil, "Key Values. Should follow pattern: 'key1,value1,key2,value2....")
 	encryptCmd.MarkFlagRequired("key-vals")
+	encryptCmd.Flags().StringP("out-file", "o", "", "Target output file. Will delete the file if it exists.")
+	encryptCmd.MarkFlagRequired("out-file")
 }
 
 func generatePlainTextSlice(inputSlice []string) ([]*secretConfig.PlaintextSecretKeyValue) {
