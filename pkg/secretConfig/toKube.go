@@ -18,7 +18,10 @@ func ConvertSecretConfigToSecretObject(configPath string, kmsKey string) (secret
 		secretKeyVals[plaintextKeyVal.Key] = []byte(plaintextKeyVal.Value)
 	}
 
-	secretObject = createSecretObject(plaintextSecretConfig.SecretName, plaintextSecretConfig.Namespace, make(map[string]string, 0), secretKeyVals)
+	secretLabels := make(map[string]string)
+	secretLabels["SecretDeployerManager"] = "true"
+
+	secretObject = createSecretObject(plaintextSecretConfig.SecretName, plaintextSecretConfig.Namespace, secretLabels, secretKeyVals)
 
 	return secretObject, plaintextSecretConfig.Namespace, nil
 }
