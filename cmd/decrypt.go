@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"github.com/nhyne/secret-deployer/pkg/secretConfig"
-	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 
@@ -14,34 +13,33 @@ import (
 var decryptCmd = &cobra.Command{
 	Use:   "decrypt",
 	Short: "Decrypt a secret config file to plain text.",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) (error) {
 
 		secretConfigPath, err := cmd.Flags().GetString("file")
 		if err != nil {
-			fmt.Printf("error reading file path flag: %v", err)
+			return fmt.Errorf("error reading file path flag: %v", err)
 		}
 
 		outputPath, err := cmd.Flags().GetString("out-file")
 		if err != nil {
-			fmt.Printf("error reading out file flag: %v", err)
+			fmt.Errorf("error reading out file flag: %v", err)
 		}
 
-		projectId := viper.Get("projectId")
-		location := viper.Get("location")
-		keyringId := viper.Get("keyringId")
-		keyId := viper.Get("keyId")
-
-		kmsKeyId := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", projectId, location, keyringId, keyId)
+		kmsKeyId, err := getGoogleKMSId()
+		if err != nil {
+			return err
+		}
 		decryptedSecretConfig, err := secretConfig.DecryptSecretConfig(secretConfigPath, kmsKeyId)
 		if err != nil {
-			fmt.Errorf("error decrypting secret config: %v", err)
+			return fmt.Errorf("error decrypting secret config: %v", err)
 		}
 
 		err = writeDecryptedSecretConfig(decryptedSecretConfig, outputPath)
 		if err != nil {
-			fmt.Printf("could not write output: %v", err)
+			return fmt.Errorf("could not write output: %v", err)
 		}
 
+		return nil
 	},
 }
 

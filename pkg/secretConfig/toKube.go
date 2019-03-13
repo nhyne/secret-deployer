@@ -18,17 +18,18 @@ func ConvertSecretConfigToSecretObject(configPath string, kmsKey string) (secret
 		secretKeyVals[plaintextKeyVal.Key] = []byte(plaintextKeyVal.Value)
 	}
 
-	secretObject = createSecretObject(plaintextSecretConfig.SecretName, make(map[string]string, 0), secretKeyVals)
+	secretObject = createSecretObject(plaintextSecretConfig.SecretName, plaintextSecretConfig.Namespace, make(map[string]string, 0), secretKeyVals)
 
 	return secretObject, plaintextSecretConfig.Namespace, nil
 }
 
-func createSecretObject(secretName string, secretLabels map[string]string, secretKeyVals map[string][]byte) (*corev1.Secret) {
+func createSecretObject(secretName string, secretNamespace string, secretLabels map[string]string, secretKeyVals map[string][]byte) (*corev1.Secret) {
 	return &corev1.Secret{
 		Type: corev1.SecretTypeOpaque,
 		ObjectMeta: metav1.ObjectMeta{
 			Name: secretName,
 			Labels: secretLabels,
+			Namespace: secretNamespace,
 		},
 		Data: secretKeyVals,
 	}

@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"github.com/nhyne/secret-deployer/pkg/secretConfig"
-	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 
@@ -15,13 +14,11 @@ var encryptCmd = &cobra.Command{
 	Use:   "encrypt",
 	Short: "Encrypt a string",
 	Long: `Encrypt a string to be put into a secret config file.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		projectId := viper.Get("projectId")
-		location := viper.Get("location")
-		keyringId := viper.Get("keyringId")
-		keyId := viper.Get("keyId")
-
-		kmsKeyId := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", projectId, location, keyringId, keyId)
+	RunE: func(cmd *cobra.Command, args []string) (error) {
+		kmsKeyId, err := getGoogleKMSId()
+		if err != nil {
+			return err
+		}
 		inputSilce, err := cmd.Flags().GetStringSlice("key-vals")
 		if err != nil {
 			fmt.Println("error: invalid key-vals list")
@@ -33,35 +30,36 @@ var encryptCmd = &cobra.Command{
 
 		outFile, err := cmd.Flags().GetString("out-file")
 		if err != nil {
-			fmt.Printf("error reading output file flag: %v", err)
+			return fmt.Errorf("error reading output file flag: %v", err)
 		}
 
 		namespace, err := cmd.Flags().GetString("namespace")
 		if err != nil {
-			fmt.Printf("error reading namespace flag: %v", err)
+			return fmt.Errorf("error reading namespace flag: %v", err)
 		}
 
 		secretName, err := cmd.Flags().GetString("secret")
 		if err != nil {
-			fmt.Printf("error reading secret flag: %v", err)
+			return fmt.Errorf("error reading secret flag: %v", err)
 		}
 
 		plaintextKeyVals := generatePlainTextSlice(inputSilce)
 
 		encryptedSecretConfig, err := secretConfig.GenerateSecretConfig(kmsKeyId, namespace, secretName, plaintextKeyVals)
 		if err != nil {
-			fmt.Printf("error generating secret config: %v", err)
+			return fmt.Errorf("error generating secret config: %v", err)
 		}
 
 		fileBytes, err := yaml.Marshal(encryptedSecretConfig)
 		if err != nil {
-			fmt.Printf("error marshalling secret config: %v", err)
+			return fmt.Errorf("error marshalling secret config: %v", err)
 		}
 
 		err = ioutil.WriteFile(outFile, fileBytes, 0644)
 		if err != nil {
-			fmt.Printf("error writing secret config to file: %v", err)
+			return fmt.Errorf("error writing secret config to file: %v", err)
 		}
+		return nil
 	},
 }
 

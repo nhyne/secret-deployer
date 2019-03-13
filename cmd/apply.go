@@ -2,32 +2,37 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/nhyne/secret-deployer/pkg/secretConfig"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"os"
 )
 
 // applyCmd represents the apply command
 var applyCmd = &cobra.Command{
 	Use:   "apply",
 	Short: "Apply a single encrypted secret file.",
-	Run: func(cmd *cobra.Command, args []string) {
-		projectId := viper.Get("projectId")
-		location := viper.Get("location")
-		keyringId := viper.Get("keyringId")
-		keyId := viper.Get("keyId")
-
+	RunE: func(cmd *cobra.Command, args []string) (error) {
 		configPath, err := cmd.Flags().GetString("file")
 		if err != nil {
-			fmt.Printf("error: %v", err)
+			return fmt.Errorf("error: %v", err)
+		}
+		err = doesInputFileExist(configPath)
+		if err != nil {
+			return err
 		}
 
-		kmsKeyId := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", projectId, location, keyringId, keyId)
-		applySecret(configPath, kmsKeyId)
+		kmsKeyId, err := getGoogleKMSId()
+		if err != nil {
+			return err
+		}
+		err = applySecret(configPath, kmsKeyId)
+		if err != nil {
+			return fmt.Errorf("coult not apply secret: %v", err)
+		}
+		return nil
 	},
 }
 
@@ -46,36 +51,52 @@ func applySecret(path string, kmsKey string) (error) {
 		return err
 	}
 
-	config, err := generateConfigFromFile("/Users/adamjohnson/.kube/config")
+	clientset, err := generateClientsetFromFile("/Users/adamjohnson/.kube/config")
 	if err != nil {
-		fmt.Printf("%v", err)
+		return err
 	}
-	clientset, err := kubernetes.NewForConfig(config)
+	secretExists, err := doesSecretExist(secretObject.Name, secretObject.Namespace, clientset)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("could not check if secret exists: %v", err)
+	}
+	if secretExists {
+		return fmt.Errorf("secret already exists, use update to modify it.")
 	}
 
-	secretOut, err := clientset.CoreV1().Secrets(namespace).Create(secretObject)
+	_, err = clientset.CoreV1().Secrets(namespace).Create(secretObject)
 	if err != nil {
-		fmt.Printf("could not create secret: %v", err)
+		return fmt.Errorf("could not create secret: %v", err)
 	}
 
 	return nil
 }
 
-//func applySecretObject(secretObject *corev1.Secret) (error) {
-//
-//}
-//
 //// returns true if the secret exists
-//func doesSecretExist(secretName string, namespace string) (bool, error) {
-//
-//}
+func doesSecretExist(secretName string, namespace string, clientset *kubernetes.Clientset) (bool, error) {
+	_, err := clientset.CoreV1().Secrets(namespace).Get(secretName, metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
 
-func generateConfigFromFile(kubeconfigPath string) (*restclient.Config, error) {
+func generateClientsetFromFile(kubeconfigPath string) (*kubernetes.Clientset, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("coulf not generate config: %v", err)
 	}
-	return config, nil
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("could not create clientset: %v", err)
+	}
+	return clientset, nil
+}
+
+func doesInputFileExist(secretConfigPath string) (error) {
+	if _, err := os.Stat(secretConfigPath); os.IsNotExist(err) {
+		return fmt.Errorf("secret file \"%s\" does not exist", secretConfigPath)
+	} else if err != nil {
+		return fmt.Errorf("error stating secret config file: %v", err)
+	}
+	return nil
 }
