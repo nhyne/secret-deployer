@@ -18,7 +18,7 @@ type PlaintetSecretConfig struct {
 }
 
 type PlaintextSecretKeyValue struct {
-	Key string
-	Value string
+	Key string `yaml:key`
+	Value []byte `yaml:plaintextVal`
 }
 

@@ -43,7 +43,7 @@ func (plaintext *PlaintextSecretKeyValue) encryptPlaintextKeyValue(kmsKeyName st
 	return
 }
 
-func gcloudEncryptPlaintext(kmsKeyName string, plaintext string) (encrypted []byte, err error) {
+func gcloudEncryptPlaintext(kmsKeyName string, plaintext []byte) (encrypted []byte, err error) {
 	ctx := context.Background()
 	client, err := cloudkms.NewKeyManagementClient(ctx)
 	if err != nil {
@@ -54,7 +54,7 @@ func gcloudEncryptPlaintext(kmsKeyName string, plaintext string) (encrypted []by
 	// Build the request.
 	req := &kmspb.EncryptRequest{
 		Name:      kmsKeyName,
-		Plaintext: []byte(plaintext),
+		Plaintext: plaintext,
 	}
 	// Call the API.
 	resp, err := client.Encrypt(ctx, req)

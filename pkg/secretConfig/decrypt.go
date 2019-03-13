@@ -73,7 +73,7 @@ func (encryptedKeyVal *EncryptedSecretKeyValue) decryptEncryptedKeyVal(kmsKey st
 		return nil, err
 	}
 
-	plaintextSecretKeyVal := PlaintextSecretKeyValue{Key: encryptedKeyVal.Key, Value: string(resp.Plaintext[:])}
+	plaintextSecretKeyVal := PlaintextSecretKeyValue{Key: encryptedKeyVal.Key, Value: resp.Plaintext}
 
 	return &plaintextSecretKeyVal, nil
 }
