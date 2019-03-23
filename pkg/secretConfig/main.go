@@ -8,6 +8,7 @@ type EncryptedSecretConfig struct {
 
 type EncryptedSecretKeyValue struct {
 	Key string `yaml:key`
+	Type string `yaml:type`
 	B64EncryptedValue string `yaml:b64EncryptedValue`
 }
 
@@ -22,3 +23,14 @@ type PlaintextSecretKeyValue struct {
 	Value []byte `yaml:plaintextVal`
 }
 
+type EncryptedSingleFile struct {
+	Key string `yaml:key`
+	Namespace string `yaml:namespace`
+	EncryptedValue string `yaml:EncryptedB64File`
+}
+
+type PlaintextSingleFile struct {
+	Key string `yaml:key`
+	Namespace string `yaml:namespace`
+	PlaintextVaule []byte `yaml:bytes`
+}

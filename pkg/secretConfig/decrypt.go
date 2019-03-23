@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	"os"
 )
 
 func DecryptSecretConfig(path string, kmsKey string) (*PlaintetSecretConfig, error) {
@@ -32,6 +33,58 @@ func DecryptSecretConfig(path string, kmsKey string) (*PlaintetSecretConfig, err
 	}
 
 	return &plaintextSecretConfig, nil
+}
+
+func DecryptSinglefile(path string, kmsKey string) (plaintextSingleFile *PlaintextSingleFile, err error) {
+
+	_, err = os.Stat(path)
+	if os.IsNotExist(err) || err != nil {
+		return
+	}
+
+	readBytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return
+	}
+
+	var encryptedSingleFile EncryptedSingleFile
+	err = yaml.Unmarshal(readBytes, encryptedSingleFile)
+
+	encryptedB64Decoded, err := b64Decode(encryptedSingleFile.EncryptedValue)
+	if err != nil {
+		return
+	}
+
+	plaintextBytes, err := gcloudDecryptEncryptedBytes(encryptedB64Decoded, kmsKey)
+
+	plaintextSingleFile = &PlaintextSingleFile{
+		Key: encryptedSingleFile.Key,
+		Namespace: encryptedSingleFile.Namespace,
+		PlaintextVaule: plaintextBytes,
+	}
+
+	return
+}
+
+func gcloudDecryptEncryptedBytes(encrypted []byte, kmsKey string) ([]byte, error) {
+	ctx := context.Background()
+	client, err := cloudkms.NewKeyManagementClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build the request.
+	req := &kmspb.DecryptRequest{
+		Name:       kmsKey,
+		Ciphertext: encrypted,
+	}
+	// Call the API.
+	resp, err := client.Decrypt(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Plaintext, nil
 }
 
 func readEncryptedSecretConfigFile(path string) (*EncryptedSecretConfig, error) {
@@ -78,6 +131,10 @@ func (encryptedKeyVal *EncryptedSecretKeyValue) decryptEncryptedKeyVal(kmsKey st
 	return &plaintextSecretKeyVal, nil
 }
 
-func (keyVal *EncryptedSecretKeyValue) b64Decode() (b64Decoded []byte, error error) {
+func (keyVal *EncryptedSecretKeyValue) b64Decode() (b64Decoded []byte, err error) {
 	return base64.StdEncoding.DecodeString(keyVal.B64EncryptedValue)
+}
+
+func b64Decode(b64Encoded string) (b64Decoded []byte, err error) {
+	return base64.StdEncoding.DecodeString(b64Encoded)
 }

@@ -6,6 +6,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	"io/ioutil"
+	"os"
 )
 
 func GenerateSecretConfig(kmsKeyName string, namespace string, secretName string, keyVals []*PlaintextSecretKeyValue) (encryptedConfig EncryptedSecretConfig, err error) {
@@ -28,6 +30,33 @@ func GenerateSecretConfig(kmsKeyName string, namespace string, secretName string
 			return encryptedConfig, fmt.Errorf("could not encrypt key/val: %v", err)
 		}
 		encryptedConfig.Secrets = append(encryptedConfig.Secrets, encryptedKeyVal)
+	}
+
+	return
+}
+
+func EncryptSingleFile(kmsKeyName string, namespace string, secretName string, filePath string) (encryptedFile *EncryptedSingleFile, err error) {
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil, err
+	}
+
+	bytesRead, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	encryptedBytes, err := gcloudEncryptPlaintext(kmsKeyName, bytesRead)
+	if err != nil {
+		return nil, err
+	}
+
+	encryptedB64EncodedBytes := b64Encode(encryptedBytes)
+
+	encryptedFile = &EncryptedSingleFile{
+		Key: secretName,
+		Namespace: namespace,
+		EncryptedValue: encryptedB64EncodedBytes,
 	}
 
 	return
